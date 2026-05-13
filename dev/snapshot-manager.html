@@ -362,16 +362,23 @@ async function doUpload() {
 
 /* ── Ativar ── */
 async function downloadSnap(key) {
+  const fname = key.split('/').pop();
   try {
     const r = await fetch(API+'/snapshots/data?key='+encodeURIComponent(key), {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
+    // Faz fetch do conteúdo e força o nome correto via Blob
+    const r2 = await fetch(d.presigned_url);
+    if(!r2.ok) throw new Error('Erro ao buscar arquivo no S3');
+    const blob = await r2.blob();
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = d.presigned_url;
-    a.download = key.split('/').pop();
+    a.href = url;
+    a.download = fname;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   } catch(e) {
     toast('Erro ao baixar: '+e.message, 'err');
   }
