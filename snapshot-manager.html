@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gerenciador de Snapshots — PMI OceanPact × CBO</title>
+<title>Gerenciador de Versões — PMI OceanPact × CBO</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -16,7 +16,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Nunito,Calibri,system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
 .hdr{height:56px;background:var(--dk1);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.hdr-l{display:flex;align-items:center;gap:0}
+.hdr-l{display:flex;align-items:center}
 .hdr-sep{width:1px;height:28px;background:rgba(157,177,207,.35);margin:0 20px}
 .hdr-item{font-size:13px;color:rgba(255,255,255,.75)}
 .hdr-item.bold{font-weight:700;color:#fff}
@@ -26,6 +26,15 @@ body{font-family:Nunito,Calibri,system-ui,sans-serif;background:var(--bg);color:
 .btn-refresh{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:Nunito,sans-serif;font-size:12px;font-weight:700;padding:6px 14px;border-radius:var(--r);cursor:pointer;transition:background .15s}
 .btn-refresh:hover{background:rgba(255,255,255,.2)}
 .btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+
+/* Tabs */
+.tabs-nav{display:flex;gap:0;border-bottom:2px solid var(--bdr);margin-bottom:24px;background:var(--sur);border-radius:var(--r) var(--r) 0 0;overflow:hidden;box-shadow:var(--shd)}
+.tab-btn{padding:14px 24px;font-size:13px;font-weight:700;color:var(--tx3);cursor:pointer;border:none;background:transparent;font-family:Nunito,sans-serif;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--dk1);background:var(--sur2)}
+.tab-btn.active{color:var(--dk1);border-bottom-color:var(--dk1);background:var(--sur)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
 .main{padding:28px;max-width:1200px;margin:0 auto}
 .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
 .kpi{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shd)}
@@ -105,7 +114,7 @@ tr:hover td{background:#FAFBFD}
     <div style="display:flex;align-items:center;gap:0">
       <span class="hdr-item bold">PMI OceanPact × CBO</span>
       <span class="hdr-dash">-</span>
-      <span class="hdr-item muted">Gerenciador de Snapshots</span>
+      <span class="hdr-item muted">Gerenciador de Versões</span>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
@@ -115,75 +124,163 @@ tr:hover td{background:#FAFBFD}
 </div>
 
 <div class="main">
+
+  <!-- KPIs globais -->
   <div class="kpi-strip">
-    <div class="kpi"><div class="kpi-bar" style="background:var(--dk1)"></div><div class="kpi-lbl">Total de Snapshots</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">No bucket S3</div></div>
-    <div class="kpi"><div class="kpi-bar" style="background:var(--green)"></div><div class="kpi-lbl">Snapshot Ativa</div><div class="kpi-val sm" id="k-ativa">—</div><div class="kpi-sub" id="k-ativa-sub">Nenhuma definida</div></div>
-    <div class="kpi"><div class="kpi-bar" style="background:var(--a1)"></div><div class="kpi-lbl">Última Versão</div><div class="kpi-val sm" id="k-ultima">—</div><div class="kpi-sub" id="k-ultima-sub"></div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--dk1)"></div><div class="kpi-lbl">Base Estática Ativa</div><div class="kpi-val sm" id="k-snap-ativa">—</div><div class="kpi-sub" id="k-snap-ativa-sub">Nenhuma definida</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--green)"></div><div class="kpi-lbl">Base de Permissões Ativa</div><div class="kpi-val sm" id="k-perm-ativa">—</div><div class="kpi-sub" id="k-perm-ativa-sub">Nenhuma definida</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--a1)"></div><div class="kpi-lbl">Total de Versões</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">Snapshots + permissões</div></div>
     <div class="kpi"><div class="kpi-bar" style="background:var(--a2)"></div><div class="kpi-lbl">Status da API</div><div class="kpi-val sm" id="k-status">—</div><div class="kpi-sub" id="k-status-sub">Verificando...</div></div>
   </div>
 
-  <div class="card">
-    <div class="card-stripe"></div>
-    <div class="card-hdr"><div class="card-title">⬆ Upload de Nova Snapshot</div></div>
-    <div class="upload-wrap">
-      <input type="file" id="file-input" accept=".json" style="display:none" onchange="onFileSelect(this)">
-      <div class="drop-zone" id="drop-zone"
-        onclick="document.getElementById('file-input').click()"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="onDrop(event)">
-        <div class="drop-icon">📁</div>
-        <div class="drop-title">Arraste o arquivo <code>.json</code> aqui ou clique para selecionar</div>
-        <div class="drop-hint">Qualquer tamanho — upload direto para o S3 via presigned URL</div>
-      </div>
-      <div class="preview" id="preview">
-        <div class="prev-info">
-          <strong id="prev-name">—</strong>
-          <span id="prev-size" style="font-size:11px;color:var(--tx3);margin-left:6px"></span>
-        </div>
-        <div class="prev-actions">
-          <label class="chk-row"><input type="checkbox" id="chk-ativa" checked> Tornar ativa após upload</label>
-          <button class="btn btn-ghost" onclick="clearUpload()">✕ Cancelar</button>
-          <button class="btn btn-primary" id="btn-up" onclick="doUpload()">⬆ Fazer upload</button>
-        </div>
-      </div>
-      <div class="progress-wrap" id="progress-wrap">
-        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
-        <div class="progress-label" id="progress-label">Iniciando...</div>
-      </div>
-    </div>
+  <!-- Tabs -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('snap')">📋 Base Estática</button>
+    <button class="tab-btn" onclick="switchTab('perm')">🔐 Base de Permissões</button>
   </div>
 
-  <div class="card">
-    <div class="card-stripe"></div>
-    <div class="card-hdr">
-      <div class="card-title">📋 Snapshots no Bucket</div>
-      <span id="list-info" style="font-size:11px;color:var(--tx3)">Carregando...</span>
+  <!-- ══════════════ ABA: BASE ESTÁTICA ══════════════ -->
+  <div class="tab-pane active" id="tab-snap">
+
+    <div class="card">
+      <div class="card-stripe"></div>
+      <div class="card-hdr"><div class="card-title">⬆ Upload de Nova Snapshot</div></div>
+      <div class="upload-wrap">
+        <input type="file" id="snap-file-input" accept=".json" style="display:none" onchange="onFileSelect(this,'snap')">
+        <div class="drop-zone" id="snap-drop-zone"
+          onclick="document.getElementById('snap-file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="onDrop(event,'snap')">
+          <div class="drop-icon">📁</div>
+          <div class="drop-title">Arraste o arquivo <code>.json</code> aqui ou clique para selecionar</div>
+          <div class="drop-hint">Qualquer tamanho — upload direto para o S3 via presigned URL</div>
+        </div>
+        <div class="preview" id="snap-preview">
+          <div class="prev-info">
+            <strong id="snap-prev-name">—</strong>
+            <span id="snap-prev-size" style="font-size:11px;color:var(--tx3);margin-left:6px"></span>
+          </div>
+          <div class="prev-actions">
+            <label class="chk-row"><input type="checkbox" id="snap-chk-ativa" checked> Tornar ativa após upload</label>
+            <button class="btn btn-ghost" onclick="clearUpload('snap')">✕ Cancelar</button>
+            <button class="btn btn-primary" id="snap-btn-up" onclick="doUpload('snap')">⬆ Fazer upload</button>
+          </div>
+        </div>
+        <div class="progress-wrap" id="snap-progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="snap-progress-fill"></div></div>
+          <div class="progress-label" id="snap-progress-label">Iniciando...</div>
+        </div>
+      </div>
     </div>
-    <div class="tbl-wrap" id="list-wrap">
-      <div class="empty"><div class="empty-icon">⏳</div><div class="empty-ttl">Carregando snapshots...</div><div class="empty-sub">Conectando à API</div></div>
+
+    <div class="card">
+      <div class="card-stripe"></div>
+      <div class="card-hdr">
+        <div class="card-title">📋 Snapshots no Bucket</div>
+        <span id="snap-list-info" style="font-size:11px;color:var(--tx3)">Carregando...</span>
+      </div>
+      <div class="tbl-wrap" id="snap-list-wrap">
+        <div class="empty"><div class="empty-icon">⏳</div><div class="empty-ttl">Carregando...</div></div>
+      </div>
     </div>
+
   </div>
+
+  <!-- ══════════════ ABA: BASE DE PERMISSÕES ══════════════ -->
+  <div class="tab-pane" id="tab-perm">
+
+    <div class="card">
+      <div class="card-stripe"></div>
+      <div class="card-hdr"><div class="card-title">⬆ Upload de Nova Base de Permissões</div></div>
+      <div class="upload-wrap">
+        <input type="file" id="perm-file-input" accept=".xlsx" style="display:none" onchange="onFileSelect(this,'perm')">
+        <div class="drop-zone" id="perm-drop-zone"
+          onclick="document.getElementById('perm-file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="onDrop(event,'perm')">
+          <div class="drop-icon">📁</div>
+          <div class="drop-title">Arraste o arquivo <code>.xlsx</code> aqui ou clique para selecionar</div>
+          <div class="drop-hint">Qualquer tamanho — upload direto para o S3 via presigned URL</div>
+        </div>
+        <div class="preview" id="perm-preview">
+          <div class="prev-info">
+            <strong id="perm-prev-name">—</strong>
+            <span id="perm-prev-size" style="font-size:11px;color:var(--tx3);margin-left:6px"></span>
+          </div>
+          <div class="prev-actions">
+            <label class="chk-row"><input type="checkbox" id="perm-chk-ativa" checked> Tornar ativa após upload</label>
+            <button class="btn btn-ghost" onclick="clearUpload('perm')">✕ Cancelar</button>
+            <button class="btn btn-primary" id="perm-btn-up" onclick="doUpload('perm')">⬆ Fazer upload</button>
+          </div>
+        </div>
+        <div class="progress-wrap" id="perm-progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="perm-progress-fill"></div></div>
+          <div class="progress-label" id="perm-progress-label">Iniciando...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-stripe"></div>
+      <div class="card-hdr">
+        <div class="card-title">🔐 Bases de Permissões no Bucket</div>
+        <span id="perm-list-info" style="font-size:11px;color:var(--tx3)">Carregando...</span>
+      </div>
+      <div class="tbl-wrap" id="perm-list-wrap">
+        <div class="empty"><div class="empty-icon">⏳</div><div class="empty-ttl">Carregando...</div></div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
-<div class="overlay" id="m-ativar">
+<!-- Modal ativar snapshot -->
+<div class="overlay" id="m-ativar-snap">
   <div class="modal">
     <div class="modal-ttl">✓ Tornar snapshot ativa?</div>
-    <div class="modal-desc" id="m-ativar-desc"></div>
+    <div class="modal-desc" id="m-ativar-snap-desc"></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('m-ativar')">Cancelar</button>
-      <button class="btn btn-success" id="btn-conf-ativar" onclick="confirmAtivar()">Confirmar</button>
+      <button class="btn btn-ghost" onclick="closeModal('m-ativar-snap')">Cancelar</button>
+      <button class="btn btn-success" id="btn-conf-ativar-snap" onclick="confirmAtivar('snap')">Confirmar</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="m-excluir">
+<!-- Modal ativar permissão -->
+<div class="overlay" id="m-ativar-perm">
+  <div class="modal">
+    <div class="modal-ttl">✓ Tornar base de permissões ativa?</div>
+    <div class="modal-desc" id="m-ativar-perm-desc"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('m-ativar-perm')">Cancelar</button>
+      <button class="btn btn-success" id="btn-conf-ativar-perm" onclick="confirmAtivar('perm')">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal excluir snapshot -->
+<div class="overlay" id="m-excluir-snap">
   <div class="modal">
     <div class="modal-ttl">🗑 Excluir snapshot?</div>
-    <div class="modal-desc" id="m-excluir-desc"></div>
+    <div class="modal-desc" id="m-excluir-snap-desc"></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('m-excluir')">Cancelar</button>
-      <button class="btn btn-danger" id="btn-conf-excluir" onclick="confirmExcluir()">Excluir</button>
+      <button class="btn btn-ghost" onclick="closeModal('m-excluir-snap')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-conf-excluir-snap" onclick="confirmExcluir('snap')">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal excluir permissão -->
+<div class="overlay" id="m-excluir-perm">
+  <div class="modal">
+    <div class="modal-ttl">🗑 Excluir base de permissões?</div>
+    <div class="modal-desc" id="m-excluir-perm-desc"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('m-excluir-perm')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-conf-excluir-perm" onclick="confirmExcluir('perm')">Excluir</button>
     </div>
   </div>
 </div>
@@ -191,169 +288,235 @@ tr:hover td{background:#FAFBFD}
 <div class="toasts" id="toasts"></div>
 
 <script>
-const API        = 'https://hgelha26b4.execute-api.us-east-1.amazonaws.com';
-const API_UPLOAD = 'https://hgelha26b4.execute-api.us-east-1.amazonaws.com'; // mesmo Gateway, nova rota
-const TOKEN      = 'pmi-token-2026';
+const API   = 'https://hgelha26b4.execute-api.us-east-1.amazonaws.com';
+const TOKEN = 'pmi-token-2026';
 
-let snaps = [], activeKey = null, pendingFile = null, pendingAtivarKey = null, pendingExcluirKey = null;
+// State
+let snaps       = [], snapActiveKey = null;
+let perms       = [], permActiveKey = null;
+let pendingFiles      = {snap: null, perm: null};
+let pendingAtivarKey  = {snap: null, perm: null};
+let pendingExcluirKey = {snap: null, perm: null};
 
 document.addEventListener('DOMContentLoaded', loadAll);
 document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
 
-/* ── Load ── */
+/* ── Tabs ── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='snap')||(i===1&&tab==='perm')));
+  document.getElementById('tab-snap').classList.toggle('active', tab==='snap');
+  document.getElementById('tab-perm').classList.toggle('active', tab==='perm');
+}
+
+/* ── Load All ── */
 async function loadAll() {
   document.getElementById('btn-refresh').disabled = true;
-  setKpi('k-status','⏳ Conectando','Aguarde...');
-  document.getElementById('list-info').textContent = 'Atualizando...';
+  document.getElementById('k-status').textContent = '⏳ Conectando';
+  document.getElementById('k-status-sub').textContent = 'Aguarde...';
+
   try {
-    const r = await fetch(API+'/snapshots', {cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const d = await r.json();
-    snaps = d.snapshots || [];
-    activeKey = d.active_key || null;
+    // Carrega active.json
+    const cfgRes = await fetch(API+'/snapshots/active-config', {cache:'no-store'});
+    const cfg = cfgRes.ok ? await cfgRes.json() : {};
+    snapActiveKey = cfg.snapshot_key || null;
+    permActiveKey = cfg.acesso_key   || null;
+
+    // Carrega lista de snapshots
+    const sRes = await fetch(API+'/snapshots', {cache:'no-store'});
+    if(!sRes.ok) throw new Error('HTTP '+sRes.status);
+    const sData = await sRes.json();
+    snaps = sData.snapshots || [];
+
+    // Carrega lista de bases de permissão (pasta bases-gestao-acesso/)
+    const pRes = await fetch(API+'/snapshots?prefix=bases-gestao-acesso/', {cache:'no-store'});
+    if(pRes.ok) {
+      const pData = await pRes.json();
+      perms = pData.snapshots || [];
+    } else {
+      perms = [];
+    }
+
     renderKpis();
-    renderList();
-    setKpi('k-status','✓ Online','API acessível');
-    document.getElementById('list-info').textContent = snaps.length+' versão(ões) encontrada(s)';
+    renderSnapList();
+    renderPermList();
+    document.getElementById('k-status').textContent = '✓ Online';
+    document.getElementById('k-status-sub').textContent = 'API acessível';
   } catch(e) {
-    setKpi('k-status','✗ Offline','Verifique CORS / rede');
-    renderError(e.message);
-    document.getElementById('list-info').textContent = 'Erro ao carregar';
-    toast('Erro ao conectar: '+e.message,'err');
+    document.getElementById('k-status').textContent = '✗ Offline';
+    document.getElementById('k-status-sub').textContent = 'Verifique CORS / rede';
+    toast('Erro ao conectar: '+e.message, 'err');
   } finally {
     document.getElementById('btn-refresh').disabled = false;
   }
 }
 
+/* ── KPIs ── */
 function renderKpis() {
-  document.getElementById('k-total').textContent = snaps.length;
-  const ativa = snaps.find(s => s.is_active);
-  document.getElementById('k-ativa').textContent = ativa ? (ativa.name||ativa.key.split('/').pop().replace('.json','')) : '—';
-  document.getElementById('k-ativa-sub').textContent = ativa ? ativa.key.split('/').pop() : 'Nenhuma definida';
-  const last = snaps[0];
-  document.getElementById('k-ultima').textContent = last ? (last.name||last.key.split('/').pop().replace('.json','')) : '—';
-  document.getElementById('k-ultima-sub').textContent = last ? fmtDate(last.created_at) : '';
-}
-function setKpi(id,val,sub) {
-  document.getElementById(id).textContent = val;
-  const s = document.getElementById(id).nextElementSibling;
-  if(s) s.textContent = sub;
+  const snapAtiva = snaps.find(s => s.key === snapActiveKey);
+  document.getElementById('k-snap-ativa').textContent = snapAtiva ? (snapAtiva.name||snapAtiva.key.split('/').pop().replace('.json','')) : '—';
+  document.getElementById('k-snap-ativa-sub').textContent = snapAtiva ? snapAtiva.key.split('/').pop() : 'Nenhuma definida';
+
+  const permAtiva = perms.find(p => p.key === permActiveKey);
+  document.getElementById('k-perm-ativa').textContent = permAtiva ? (permAtiva.name||permAtiva.key.split('/').pop()) : (permActiveKey ? permActiveKey.split('/').pop() : '—');
+  document.getElementById('k-perm-ativa-sub').textContent = permActiveKey ? permActiveKey.split('/').pop() : 'Nenhuma definida';
+
+  document.getElementById('k-total').textContent = snaps.length + perms.length;
 }
 
-function renderList() {
-  const wrap = document.getElementById('list-wrap');
+/* ── Snap List ── */
+function renderSnapList() {
+  const wrap = document.getElementById('snap-list-wrap');
+  document.getElementById('snap-list-info').textContent = snaps.length+' versão(ões) encontrada(s)';
   if(!snaps.length) {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-ttl">Nenhuma snapshot encontrada</div><div class="empty-sub">Faça upload para começar</div></div>';
     return;
   }
   const rows = snaps.map(s => {
-    const isAtiva = s.is_active || s.key === activeKey;
+    const isAtiva = s.key === snapActiveKey;
     const nome = s.name || s.key.split('/').pop().replace('.json','');
     const kb = s.size_bytes ? Math.round(s.size_bytes/1024)+' KB' : '—';
     const badge = isAtiva ? '<span class="badge badge-on">✓ ativa</span>' : '<span class="badge badge-off">inativa</span>';
-    const ativarBtn = isAtiva ? '' : `<button class="btn btn-success" onclick="askAtivar('${s.key}')">✓ Tornar ativa</button>`;
+    const ativarBtn = isAtiva ? '' : `<button class="btn btn-success" onclick="askAtivar('snap','${s.key}')">✓ Tornar ativa</button>`;
     return `<tr>
       <td><strong>${nome}</strong></td>
       <td><span class="key">${s.key}</span></td>
       <td>${badge}</td>
       <td style="color:var(--tx3);font-size:11px">${kb}</td>
       <td style="color:var(--tx3);font-size:11px">${fmtDate(s.created_at)}</td>
-      <td><div style="display:flex;gap:6px">${ativarBtn}<button class="btn btn-ghost" onclick="downloadSnap('${s.key}')">⬇ Baixar</button><button class="btn btn-danger" onclick="askExcluir('${s.key}')">🗑 Excluir</button></div></td>
+      <td><div style="display:flex;gap:6px">${ativarBtn}<button class="btn btn-ghost" onclick="downloadItem('${s.key}')">⬇ Baixar</button><button class="btn btn-danger" onclick="askExcluir('snap','${s.key}')">🗑 Excluir</button></div></td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table><thead><tr><th>Nome</th><th>Key no S3</th><th>Status</th><th>Tamanho</th><th>Criada em</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
-function renderError(msg) {
-  document.getElementById('list-wrap').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-ttl">Não foi possível carregar</div><div class="empty-sub">${msg}</div></div>`;
+
+/* ── Perm List ── */
+function renderPermList() {
+  const wrap = document.getElementById('perm-list-wrap');
+  document.getElementById('perm-list-info').textContent = perms.length+' versão(ões) encontrada(s)';
+  if(!perms.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-ttl">Nenhuma base de permissões encontrada</div><div class="empty-sub">Faça upload para começar</div></div>';
+    return;
+  }
+  const rows = perms.map(p => {
+    const isAtiva = p.key === permActiveKey;
+    const nome = p.name || p.key.split('/').pop();
+    const kb = p.size_bytes ? Math.round(p.size_bytes/1024)+' KB' : '—';
+    const badge = isAtiva ? '<span class="badge badge-on">✓ ativa</span>' : '<span class="badge badge-off">inativa</span>';
+    const ativarBtn = isAtiva ? '' : `<button class="btn btn-success" onclick="askAtivar('perm','${p.key}')">✓ Tornar ativa</button>`;
+    return `<tr>
+      <td><strong>${nome}</strong></td>
+      <td><span class="key">${p.key}</span></td>
+      <td>${badge}</td>
+      <td style="color:var(--tx3);font-size:11px">${kb}</td>
+      <td style="color:var(--tx3);font-size:11px">${fmtDate(p.created_at)}</td>
+      <td><div style="display:flex;gap:6px">${ativarBtn}<button class="btn btn-ghost" onclick="downloadItem('${p.key}')">⬇ Baixar</button><button class="btn btn-danger" onclick="askExcluir('perm','${p.key}')">🗑 Excluir</button></div></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table><thead><tr><th>Nome</th><th>Key no S3</th><th>Status</th><th>Tamanho</th><th>Criada em</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-/* ── Upload via presigned URL ── */
-function onDrop(e) {
+/* ── Upload ── */
+function onDrop(e, tab) {
   e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag');
-  if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  document.getElementById(tab+'-drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if(f) setFile(f, tab);
 }
-function onFileSelect(input) { if(input.files[0]) setFile(input.files[0]); }
-function setFile(f) {
-  if(!f.name.endsWith('.json')) { toast('Apenas arquivos .json são aceitos','err'); return; }
-  pendingFile = f;
-  document.getElementById('prev-name').textContent = f.name;
-  document.getElementById('prev-size').textContent = Math.round(f.size/1024)+' KB';
-  document.getElementById('preview').classList.add('show');
-  document.getElementById('progress-wrap').classList.remove('show');
+function onFileSelect(input, tab) { if(input.files[0]) setFile(input.files[0], tab); }
+function setFile(f, tab) {
+  const ext = tab === 'snap' ? '.json' : '.xlsx';
+  if(!f.name.endsWith(ext)) { toast('Apenas arquivos '+ext+' são aceitos', 'err'); return; }
+  pendingFiles[tab] = f;
+  document.getElementById(tab+'-prev-name').textContent = f.name;
+  document.getElementById(tab+'-prev-size').textContent = Math.round(f.size/1024)+' KB';
+  document.getElementById(tab+'-preview').classList.add('show');
+  document.getElementById(tab+'-progress-wrap').classList.remove('show');
 }
-function clearUpload() {
-  pendingFile = null;
-  document.getElementById('preview').classList.remove('show');
-  document.getElementById('progress-wrap').classList.remove('show');
-  document.getElementById('file-input').value = '';
+function clearUpload(tab) {
+  pendingFiles[tab] = null;
+  document.getElementById(tab+'-preview').classList.remove('show');
+  document.getElementById(tab+'-progress-wrap').classList.remove('show');
+  document.getElementById(tab+'-file-input').value = '';
+}
+function setProgress(tab, pct, label) {
+  document.getElementById(tab+'-progress-fill').style.width = pct+'%';
+  document.getElementById(tab+'-progress-label').textContent = label;
 }
 
-function setProgress(pct, label) {
-  document.getElementById('progress-fill').style.width = pct+'%';
-  document.getElementById('progress-label').textContent = label;
-}
+async function doUpload(tab) {
+  const f = pendingFiles[tab];
+  if(!f) return;
+  const btn = document.getElementById(tab+'-btn-up');
+  const tornarAtiva = document.getElementById(tab+'-chk-ativa').checked;
+  const fname = f.name.replace(/\.json$/, '').replace(/\.xlsx$/, '');
 
-async function doUpload() {
-  if(!pendingFile) return;
-  const btn = document.getElementById('btn-up');
-  const tornarAtiva = document.getElementById('chk-ativa').checked;
-  const fname = pendingFile.name.replace('.json','');
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Preparando...';
-  document.getElementById('progress-wrap').classList.add('show');
-  setProgress(5, 'Solicitando URL de upload...');
+  document.getElementById(tab+'-progress-wrap').classList.add('show');
+  setProgress(tab, 5, 'Solicitando URL de upload...');
 
   try {
-    // Etapa 1: pede presigned URL ao Lambda
-    const r1 = await fetch(API_UPLOAD+'/snapshots/upload', {
+    // Etapa 1: presigned URL
+    const r1 = await fetch(API+'/snapshots/upload', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Api-Token':TOKEN},
-      body: JSON.stringify({action:'get-upload-url', new_name:fname, set_active:tornarAtiva})
+      body: JSON.stringify({
+        action: 'get-upload-url',
+        new_name: fname,
+        type: tab === 'snap' ? 'snapshot' : 'acesso',
+        set_active: tornarAtiva
+      })
     });
     if(!r1.ok) { const e=await r1.json().catch(()=>({})); throw new Error('API '+r1.status+(e.error?': '+e.error:'')); }
     const d1 = await r1.json();
     const { upload_url, key, set_active } = d1;
 
-    setProgress(15, 'URL obtida. Enviando arquivo para o S3...');
+    setProgress(tab, 15, 'Enviando arquivo para o S3...');
     btn.innerHTML = '<span class="spin"></span> Enviando...';
 
-    // Etapa 2: PUT direto no S3 via presigned URL com XMLHttpRequest para progress
+    // Etapa 2: PUT direto no S3
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', upload_url);
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Content-Type', d1.content_type || (tab==='snap'?'application/json':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
       xhr.upload.onprogress = e => {
         if(e.lengthComputable) {
           const pct = 15 + Math.round((e.loaded/e.total)*70);
-          setProgress(pct, `Enviando... ${Math.round(e.loaded/1024)} / ${Math.round(e.total/1024)} KB`);
+          setProgress(tab, pct, `Enviando... ${Math.round(e.loaded/1024)} / ${Math.round(e.total/1024)} KB`);
         }
       };
       xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('S3 retornou '+xhr.status));
       xhr.onerror = () => reject(new Error('Erro de rede no upload para o S3'));
-      xhr.send(pendingFile);
+      xhr.send(f);
     });
 
-    setProgress(90, 'Upload concluído. Confirmando...');
+    setProgress(tab, 90, 'Upload concluído. Confirmando...');
     btn.innerHTML = '<span class="spin"></span> Confirmando...';
 
-    // Etapa 3: confirma ao Lambda (ativa se necessário)
-    const r3 = await fetch(API_UPLOAD+'/snapshots/upload', {
+    // Etapa 3: confirma + ativa se necessário
+    const r3 = await fetch(API+'/snapshots/upload', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Api-Token':TOKEN},
-      body: JSON.stringify({action:'confirm-upload', key, set_active})
+      body: JSON.stringify({
+        action: 'confirm-upload',
+        key,
+        set_active,
+        type: d1.type,
+        active_field: d1.active_field
+      })
     });
     if(!r3.ok) { const e=await r3.json().catch(()=>({})); throw new Error('Confirmação falhou: '+r3.status+(e.error?': '+e.error:'')); }
 
-    setProgress(100, 'Upload concluído com sucesso!');
-    toast('✓ Snapshot "'+fname+'" enviada!','ok');
-    if(tornarAtiva) toast('✓ Marcada como ativa','ok');
-    setTimeout(() => { clearUpload(); loadAll(); }, 800);
+    setProgress(tab, 100, 'Upload concluído com sucesso!');
+    const label = tab === 'snap' ? 'Snapshot' : 'Base de permissões';
+    toast('✓ '+label+' "'+fname+'" enviada!', 'ok');
+    if(tornarAtiva) toast('✓ Marcada como ativa', 'ok');
+    setTimeout(() => { clearUpload(tab); loadAll(); }, 800);
 
   } catch(e) {
-    setProgress(0, 'Erro: '+e.message);
-    toast('Erro no upload: '+e.message,'err');
+    setProgress(tab, 0, 'Erro: '+e.message);
+    toast('Erro no upload: '+e.message, 'err');
   } finally {
     btn.disabled = false;
     btn.textContent = '⬆ Fazer upload';
@@ -361,86 +524,92 @@ async function doUpload() {
 }
 
 /* ── Ativar ── */
-async function downloadSnap(key) {
+function askAtivar(tab, key) {
+  pendingAtivarKey[tab] = key;
+  const nome = key.split('/').pop().replace('.json','');
+  const label = tab === 'snap' ? 'snapshot' : 'base de permissões';
+  document.getElementById('m-ativar-'+tab+'-desc').textContent = 'A '+label+' "'+nome+'" será marcada como ativa.';
+  openModal('m-ativar-'+tab);
+}
+async function confirmAtivar(tab) {
+  const key = pendingAtivarKey[tab];
+  if(!key) return;
+  const btn = document.getElementById('btn-conf-ativar-'+tab);
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  try {
+    // Atualiza active.json via POST /snapshots/active-config
+    const field = tab === 'snap' ? 'snapshot_key' : 'acesso_key';
+    const body = {};
+    body[field] = key;
+    const r = await fetch(API+'/snapshots/active-config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Api-Token':TOKEN},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    toast('✓ "'+key.split('/').pop().replace('.json','')+'" agora é a ativa', 'ok');
+    closeModal('m-ativar-'+tab);
+    await loadAll();
+  } catch(e) {
+    toast('Erro: '+e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirmar';
+    pendingAtivarKey[tab] = null;
+  }
+}
+
+/* ── Excluir ── */
+function askExcluir(tab, key) {
+  const activeK = tab === 'snap' ? snapActiveKey : permActiveKey;
+  if(key === activeK) { toast('Não é possível excluir o arquivo ativo. Ative outro primeiro.', 'warn'); return; }
+  pendingExcluirKey[tab] = key;
+  const nome = key.split('/').pop().replace('.json','');
+  const label = tab === 'snap' ? 'snapshot' : 'base de permissões';
+  document.getElementById('m-excluir-'+tab+'-desc').innerHTML = 'A '+label+' <strong>'+nome+'</strong> será removida permanentemente do S3. Esta ação não pode ser desfeita.';
+  openModal('m-excluir-'+tab);
+}
+async function confirmExcluir(tab) {
+  const key = pendingExcluirKey[tab];
+  if(!key) return;
+  const btn = document.getElementById('btn-conf-excluir-'+tab);
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  try {
+    const r = await fetch(API+'/snapshots/apply', {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json','X-Api-Token':TOKEN},
+      body: JSON.stringify({key})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    toast('✓ Arquivo excluído', 'ok');
+    closeModal('m-excluir-'+tab);
+    await loadAll();
+  } catch(e) {
+    toast('Erro ao excluir: '+e.message, 'err');
+    closeModal('m-excluir-'+tab);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Excluir';
+    pendingExcluirKey[tab] = null;
+  }
+}
+
+/* ── Download ── */
+async function downloadItem(key) {
   const fname = key.split('/').pop();
   try {
     const r = await fetch(API+'/snapshots/data?key='+encodeURIComponent(key), {cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
-    // Faz fetch do conteúdo e força o nome correto via Blob
     const r2 = await fetch(d.presigned_url);
     if(!r2.ok) throw new Error('Erro ao buscar arquivo no S3');
     const blob = await r2.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch(e) {
     toast('Erro ao baixar: '+e.message, 'err');
-  }
-}
-
-function askAtivar(key) {
-  pendingAtivarKey = key;
-  const nome = key.split('/').pop().replace('.json','');
-  document.getElementById('m-ativar-desc').textContent = 'A snapshot "'+nome+'" será marcada como ativa. O Hub PMI passará a servir esta versão como padrão.';
-  openModal('m-ativar');
-}
-async function confirmAtivar() {
-  if(!pendingAtivarKey) return;
-  const btn = document.getElementById('btn-conf-ativar');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
-  try {
-    const r = await fetch(API+'/snapshots/apply', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Api-Token':TOKEN},
-      body:JSON.stringify({action:'update',target_key:pendingAtivarKey,set_active:true})
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    toast('✓ "'+pendingAtivarKey.split('/').pop().replace('.json','')+'" agora é a ativa','ok');
-    closeModal('m-ativar');
-    await loadAll();
-  } catch(e) {
-    toast('Erro: '+e.message,'err');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Confirmar';
-    pendingAtivarKey = null;
-  }
-}
-
-/* ── Excluir ── */
-function askExcluir(key) {
-  const snap = snaps.find(s=>s.key===key);
-  if(snap&&(snap.is_active||key===activeKey)) { toast('Não é possível excluir a snapshot ativa. Ative outra primeiro.','warn'); return; }
-  pendingExcluirKey = key;
-  const nome = key.split('/').pop().replace('.json','');
-  document.getElementById('m-excluir-desc').innerHTML = 'A snapshot <strong>'+nome+'</strong> será removida permanentemente do S3. Esta ação não pode ser desfeita.';
-  openModal('m-excluir');
-}
-async function confirmExcluir() {
-  if(!pendingExcluirKey) return;
-  const btn = document.getElementById('btn-conf-excluir');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
-  try {
-    const r = await fetch(API+'/snapshots/apply', {
-      method:'DELETE',
-      headers:{'Content-Type':'application/json','X-Api-Token':TOKEN},
-      body:JSON.stringify({key:pendingExcluirKey})
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    toast('✓ Snapshot excluída','ok');
-    closeModal('m-excluir');
-    await loadAll();
-  } catch(e) {
-    toast('Erro ao excluir: '+e.message,'err');
-    closeModal('m-excluir');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Excluir';
-    pendingExcluirKey = null;
   }
 }
 
@@ -450,15 +619,15 @@ function fmtDate(iso) {
   try { return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }
   catch(e) { return iso; }
 }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function toast(msg,type='') {
+function toast(msg, type='') {
   const w = document.getElementById('toasts');
   const el = document.createElement('div');
   el.className = 'toast '+type;
   el.textContent = msg;
   w.appendChild(el);
-  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); },3500);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3500);
 }
 </script>
 </body>
