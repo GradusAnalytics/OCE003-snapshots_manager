@@ -125,11 +125,11 @@ tr:hover td{background:#FAFBFD}
 
 <div class="main">
 
-  <!-- KPIs globais -->
-  <div class="kpi-strip">
-    <div class="kpi"><div class="kpi-bar" style="background:var(--dk1)"></div><div class="kpi-lbl">Base Estática Ativa</div><div class="kpi-val sm" id="k-snap-ativa">—</div><div class="kpi-sub" id="k-snap-ativa-sub">Nenhuma definida</div></div>
-    <div class="kpi"><div class="kpi-bar" style="background:var(--green)"></div><div class="kpi-lbl">Base de Permissões Ativa</div><div class="kpi-val sm" id="k-perm-ativa">—</div><div class="kpi-sub" id="k-perm-ativa-sub">Nenhuma definida</div></div>
-    <div class="kpi"><div class="kpi-bar" style="background:var(--a1)"></div><div class="kpi-lbl">Total de Versões</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">Snapshots + permissões</div></div>
+  <!-- KPIs — re-renderizados por aba -->
+  <div class="kpi-strip" id="kpi-strip">
+    <div class="kpi"><div class="kpi-bar" id="k-bar-ativa" style="background:var(--green)"></div><div class="kpi-lbl" id="k-lbl-ativa">Ativa</div><div class="kpi-val sm" id="k-ativa">—</div><div class="kpi-sub" id="k-ativa-sub">Nenhuma definida</div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--a1)"></div><div class="kpi-lbl" id="k-lbl-ultima">Última Versão</div><div class="kpi-val sm" id="k-ultima">—</div><div class="kpi-sub" id="k-ultima-sub"></div></div>
+    <div class="kpi"><div class="kpi-bar" style="background:var(--dk1)"></div><div class="kpi-lbl" id="k-lbl-total">Total de Versões</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub" id="k-total-sub">No bucket S3</div></div>
     <div class="kpi"><div class="kpi-bar" style="background:var(--a2)"></div><div class="kpi-lbl">Status da API</div><div class="kpi-val sm" id="k-status">—</div><div class="kpi-sub" id="k-status-sub">Verificando...</div></div>
   </div>
 
@@ -303,9 +303,11 @@ document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e
 
 /* ── Tabs ── */
 function switchTab(tab) {
+  currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='snap')||(i===1&&tab==='perm')));
   document.getElementById('tab-snap').classList.toggle('active', tab==='snap');
   document.getElementById('tab-perm').classList.toggle('active', tab==='perm');
+  renderKpis();
 }
 
 /* ── Load All ── */
@@ -351,16 +353,30 @@ async function loadAll() {
 }
 
 /* ── KPIs ── */
+let currentTab = 'snap';
+
 function renderKpis() {
-  const snapAtiva = snaps.find(s => s.key === snapActiveKey);
-  document.getElementById('k-snap-ativa').textContent = snapAtiva ? (snapAtiva.name||snapAtiva.key.split('/').pop().replace('.json','')) : '—';
-  document.getElementById('k-snap-ativa-sub').textContent = snapAtiva ? snapAtiva.key.split('/').pop() : 'Nenhuma definida';
+  const isSnap = currentTab === 'snap';
+  const items   = isSnap ? snaps : perms;
+  const activeK = isSnap ? snapActiveKey : permActiveKey;
+  const ext     = isSnap ? '.json' : '.xlsx';
+  const lbl     = isSnap ? 'Base Estática Ativa' : 'Base de Permissões Ativa';
+  const totalLbl = isSnap ? 'Total de Snapshots' : 'Total de Bases';
+  const totalSub = isSnap ? 'Na pasta snapshots/' : 'Na pasta bases-gestao-acesso/';
 
-  const permAtiva = perms.find(p => p.key === permActiveKey);
-  document.getElementById('k-perm-ativa').textContent = permAtiva ? (permAtiva.name||permAtiva.key.split('/').pop()) : (permActiveKey ? permActiveKey.split('/').pop() : '—');
-  document.getElementById('k-perm-ativa-sub').textContent = permActiveKey ? permActiveKey.split('/').pop() : 'Nenhuma definida';
+  document.getElementById('k-lbl-ativa').textContent  = lbl;
+  document.getElementById('k-lbl-total').textContent  = totalLbl;
+  document.getElementById('k-total-sub').textContent  = totalSub;
 
-  document.getElementById('k-total').textContent = snaps.length + perms.length;
+  const ativa = items.find(s => s.key === activeK);
+  document.getElementById('k-ativa').textContent     = ativa ? (ativa.name||ativa.key.split('/').pop().replace(ext,'')) : '—';
+  document.getElementById('k-ativa-sub').textContent = ativa ? ativa.key.split('/').pop() : 'Nenhuma definida';
+
+  const last = items[0];
+  document.getElementById('k-ultima').textContent     = last ? (last.name||last.key.split('/').pop().replace(ext,'')) : '—';
+  document.getElementById('k-ultima-sub').textContent = last ? fmtDate(last.created_at) : '';
+
+  document.getElementById('k-total').textContent = items.length;
 }
 
 /* ── Snap List ── */
