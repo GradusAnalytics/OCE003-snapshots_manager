@@ -517,7 +517,8 @@ async function doUpload(tab) {
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', upload_url);
-      xhr.setRequestHeader('Content-Type', d1.content_type || 'application/json');
+      // Sem Content-Type: a presigned URL (SigV4) não assina ContentType.
+      // Qualquer header não-assinado que altere a request quebra a assinatura.
       xhr.upload.onprogress = e => {
         if(e.lengthComputable) setProgress(tab, 15+Math.round((e.loaded/e.total)*70), `Enviando... ${Math.round(e.loaded/1024)} / ${Math.round(e.total/1024)} KB`);
       };
