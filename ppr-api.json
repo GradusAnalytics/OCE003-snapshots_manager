@@ -1,0 +1,330 @@
+{
+  "versao_manifest": 1,
+  "ferramenta": {
+    "codigo": "oce003_snapshots_manager",
+    "nome": "Gerenciador de Snapshots — PMI OceanPact × CBO",
+    "repositorio": "GradusAnalytics/OCE003-snapshots_manager",
+    "descricao": "Lista, ativa, envia e exclui as snapshots, as bases de permissão e o log de decisões do Hub PMI no bucket gradus-pmi-snapshots"
+  },
+  "servico": {
+    "porta": null,
+    "url_base": "https://hgelha26b4.execute-api.us-east-1.amazonaws.com",
+    "prefixo_upstream": "/",
+    "rota_ppr": null,
+    "saude": { "caminho": "/snapshots/active-config", "status_esperado": 200 }
+  },
+  "identidade": {
+    "cabecalho_email": null,
+    "cabecalho_nome": null,
+    "cabecalhos_segredos": ["X-Api-Token"]
+  },
+  "operacoes": [
+    {
+      "codigo": "config_ativa",
+      "nome": "Ver arquivos ativos",
+      "descricao": "Keys da snapshot ativa e da base de permissões ativa (active.json, Lambda pmi-get-active-config)",
+      "efeito": "leitura",
+      "metodo": "GET",
+      "caminho": "/snapshots/active-config",
+      "corpo": null,
+      "timeout_s": 20,
+      "entradas": [],
+      "saidas": [
+        {
+          "codigo": "snapshot_key",
+          "nome": "Snapshot ativa",
+          "tipo": "texto_curto",
+          "origem": "/snapshot_key",
+          "descricao": "Key no S3 da snapshot servida pelo Hub"
+        },
+        {
+          "codigo": "acesso_key",
+          "nome": "Base de permissões ativa",
+          "tipo": "texto_curto",
+          "origem": "/acesso_key",
+          "descricao": "Key no S3 do Excel de gestão de acesso usado pelo Hub"
+        }
+      ]
+    },
+    {
+      "codigo": "listar",
+      "nome": "Listar arquivos",
+      "descricao": "Lista as versões de um prefixo do bucket (Lambda pmi-list-snapshots)",
+      "efeito": "leitura",
+      "metodo": "GET",
+      "caminho": "/snapshots",
+      "corpo": null,
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "prefix",
+          "nome": "Prefixo",
+          "tipo": "texto_curto",
+          "onde": "query",
+          "obrigatorio": false,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Vazio = snapshots/; bases-gestao-acesso/ = bases de permissão; decisions_log.json = log de decisões"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "arquivos",
+          "nome": "Arquivos",
+          "tipo": "tabela",
+          "origem": "/snapshots",
+          "descricao": "key, name, size_bytes e created_at, do mais recente para o mais antigo"
+        }
+      ]
+    },
+    {
+      "codigo": "url_download",
+      "nome": "Gerar link de download",
+      "descricao": "URL pré-assinada do S3 para baixar um arquivo do bucket; sem key, a snapshot ativa (Lambda pmi-get-snapshot)",
+      "efeito": "leitura",
+      "metodo": "GET",
+      "caminho": "/snapshots/data",
+      "corpo": null,
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "key",
+          "nome": "Key no S3",
+          "tipo": "texto_curto",
+          "onde": "query",
+          "obrigatorio": false,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Por exemplo snapshots/snapshot_v31.json. Vazio = snapshot ativa"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "presigned_url",
+          "nome": "URL de download",
+          "tipo": "texto_curto",
+          "origem": "/presigned_url",
+          "descricao": "URL pré-assinada (GET) do arquivo no S3"
+        },
+        {
+          "codigo": "key",
+          "nome": "Key no S3",
+          "tipo": "texto_curto",
+          "origem": "/key",
+          "descricao": "Key efetivamente resolvida"
+        }
+      ]
+    },
+    {
+      "codigo": "definir_ativa",
+      "nome": "Tornar ativa",
+      "descricao": "Grava no active.json qual snapshot ou qual base de permissões o Hub passa a carregar. Informe só um dos dois campos",
+      "efeito": "escrita",
+      "metodo": "POST",
+      "caminho": "/snapshots/active-config",
+      "corpo": "json",
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "snapshot_key",
+          "nome": "Snapshot",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": false,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Key da snapshot a ativar, por exemplo snapshots/snapshot_v31.json"
+        },
+        {
+          "codigo": "acesso_key",
+          "nome": "Base de permissões",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": false,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Key do Excel de permissões a ativar, em bases-gestao-acesso/"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "resultado",
+          "nome": "Resultado",
+          "tipo": "json",
+          "origem": "",
+          "descricao": "Resposta da Lambda"
+        }
+      ]
+    },
+    {
+      "codigo": "url_upload",
+      "nome": "Gerar link de upload",
+      "descricao": "Passo 1 de 3 do envio: devolve uma URL pré-assinada (5 minutos) para PUT direto no S3, sem cabeçalho Content-Type. Depois do PUT, chame confirmar_upload com os campos devolvidos (Lambda pmi-upload-url)",
+      "efeito": "escrita",
+      "metodo": "POST",
+      "caminho": "/snapshots/upload",
+      "corpo": "json",
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "action",
+          "nome": "Ação",
+          "tipo": "picklist",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": "get-upload-url",
+          "opcoes": ["get-upload-url"],
+          "descricao": "Valor fixo exigido pela Lambda"
+        },
+        {
+          "codigo": "new_name",
+          "nome": "Nome do arquivo",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Nome sem extensão, por exemplo snapshot_v32; para o log de decisões, decisions_log"
+        },
+        {
+          "codigo": "type",
+          "nome": "Tipo",
+          "tipo": "picklist",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": "snapshot",
+          "opcoes": ["snapshot", "acesso", "decisions"],
+          "descricao": "snapshot = JSON do Hub; acesso = Excel de permissões; decisions = decisions_log.json"
+        },
+        {
+          "codigo": "set_active",
+          "nome": "Tornar ativa",
+          "tipo": "booleano",
+          "onde": "corpo",
+          "obrigatorio": false,
+          "padrao": false,
+          "opcoes": [],
+          "descricao": "Ativar o arquivo ao confirmar o upload (não vale para decisions)"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "upload_url",
+          "nome": "URL de upload",
+          "tipo": "texto_curto",
+          "origem": "/upload_url",
+          "descricao": "URL pré-assinada para PUT do arquivo no S3"
+        },
+        {
+          "codigo": "dados_confirmacao",
+          "nome": "Dados para confirmar",
+          "tipo": "json",
+          "origem": "",
+          "descricao": "key, set_active, type e active_field, a repassar em confirmar_upload"
+        }
+      ]
+    },
+    {
+      "codigo": "confirmar_upload",
+      "nome": "Confirmar upload",
+      "descricao": "Passo 3 de 3 do envio: confere que o arquivo chegou ao S3 e, se pedido, o torna ativo (Lambda pmi-upload-url)",
+      "efeito": "escrita",
+      "metodo": "POST",
+      "caminho": "/snapshots/upload",
+      "corpo": "json",
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "action",
+          "nome": "Ação",
+          "tipo": "picklist",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": "confirm-upload",
+          "opcoes": ["confirm-upload"],
+          "descricao": "Valor fixo exigido pela Lambda"
+        },
+        {
+          "codigo": "key",
+          "nome": "Key no S3",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "key devolvida por url_upload"
+        },
+        {
+          "codigo": "set_active",
+          "nome": "Tornar ativa",
+          "tipo": "booleano",
+          "onde": "corpo",
+          "obrigatorio": false,
+          "padrao": false,
+          "opcoes": [],
+          "descricao": "set_active devolvido por url_upload"
+        },
+        {
+          "codigo": "type",
+          "nome": "Tipo",
+          "tipo": "picklist",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": "snapshot",
+          "opcoes": ["snapshot", "acesso", "decisions"],
+          "descricao": "type devolvido por url_upload"
+        },
+        {
+          "codigo": "active_field",
+          "nome": "Campo ativo",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": false,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "active_field devolvido por url_upload"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "resultado",
+          "nome": "Resultado",
+          "tipo": "json",
+          "origem": "",
+          "descricao": "Resposta da Lambda"
+        }
+      ]
+    },
+    {
+      "codigo": "excluir",
+      "nome": "Excluir arquivo",
+      "descricao": "Remove um arquivo do bucket; a Lambda impede excluir a snapshot ativa (Lambda pmi-apply-snapshot)",
+      "efeito": "escrita",
+      "metodo": "DELETE",
+      "caminho": "/snapshots/apply",
+      "corpo": "json",
+      "timeout_s": 20,
+      "entradas": [
+        {
+          "codigo": "key",
+          "nome": "Key no S3",
+          "tipo": "texto_curto",
+          "onde": "corpo",
+          "obrigatorio": true,
+          "padrao": null,
+          "opcoes": [],
+          "descricao": "Por exemplo snapshots/snapshot_v29.json"
+        }
+      ],
+      "saidas": [
+        {
+          "codigo": "resultado",
+          "nome": "Resultado",
+          "tipo": "json",
+          "origem": "",
+          "descricao": "Resposta da Lambda"
+        }
+      ]
+    }
+  ]
+}
